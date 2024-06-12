@@ -1,0 +1,301 @@
+.data
+string_input: .space 128        # Cung c?p không gian 64 byte cho chu?i ??u vào
+stack : .space 128
+stack_2: .space 4000
+post_fix: .space 128
+left_parenthesis: .asciiz "("
+right_parenthesis: .asciiz ")"
+.text
+main:
+    #scanf("%s", string_input)
+    li $v0, 8            
+    la $a0, string_input      
+    li $a1, 128           
+    syscall             
+    
+    # Khai bao cac bien 
+    li $s0,0 #PostfixIndex
+    li $s1,-1 #stackIndex
+    la $t0, string_input 
+for_loop_Infix_to_Postfix:    
+    lb $t2, 0($t0)       #c 
+    beq $t2, 10, while_loop_3_Infix_to_Postfix  # Kiem tra xem da den ki tu enter chua
+    
+    #if(c >= '0' && c <= '9')
+    sge $t3,$t2, 48 #c>='0'
+    sle $t4,$t2, 57 #c<= '9'
+    mult $t3,$t4
+    mflo $t5
+    li $t6,1
+    beq $t5,$t6, if_1_for_loop_Infix_to_Postfix
+    
+    #else if (c == '(')
+    beq $t2,40, if_2_for_loop_Infix_to_Postfix	
+    
+    #else if (c == ')')
+    beq $t2,41, if_3_for_loop_Infix_to_Postfix
+    
+    #else
+    j if_4_for_loop_Infix_to_Postfix
+    
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo       
+    j for_loop_Infix_to_Postfix # Lap lai vong lap
+if_1_for_loop_Infix_to_Postfix:
+    #Postfix[PostfixIndex++] = c;
+    la $s2, post_fix
+    add $s2, $s2, $s0
+    #lb $s3, $t2
+    sb $t2,($s2)
+    addi $s0,$s0,1
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo       
+    j for_loop_Infix_to_Postfix # Lap lai vong lap
+if_2_for_loop_Infix_to_Postfix:
+    #stack[++stackIndex] = c;	
+    addi $s1,$s1,1
+    la $s2, stack
+    add $s2,$s2,$s1
+    #lb $s3, ($t2)
+    sb $t2,($s2)
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo       
+    j for_loop_Infix_to_Postfix # Lap lai vong lap
+if_3_for_loop_Infix_to_Postfix:
+    #while (stackIndex >= 0 && stack[stackIndex] != '(')
+    la $s2, stack
+    add $s2,$s2,$s1
+    lb $s3, ($s2)
+    sge $s4,$s1,0 #stackIndex >= 0
+    sne $s5,$s3,40 #stack[stackIndex] != '('
+    mult $s4,$s5
+    mflo $s6
+   
+    beq $s6,1,while_loop_1_Infix_to_Postfix
+    sub $s1,$s1,1 #stackIndex--
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo       
+    j for_loop_Infix_to_Postfix # Lap lai vong lap
+if_4_for_loop_Infix_to_Postfix:
+    sge $s4,$s1,0 #stackIndex >= 0
+    #prec(c)
+    seq $s5,$t2,40 
+    seq $s5,$s5,0
+    seq $s6,$t2,43
+    add $s5,$s5,$s6
+    seq $s6,$t2,45
+    add $s5,$s5,$s6
+   
+    addi $s5,$s5,1
+    seq $s6,$s5,3
+    sub $s5,$s5,$s6
+    
+    #seq $s5,$s5,1
+    seq $s6,$t2,42
+    add $s5,$s5,$s6
+    seq $s6,$t2,47
+    add $s5,$s5,$s6
+    
+    addi $s5,$s5,1
+    #prec(stack[stackIndex])
+    la $s2, stack
+    add $s2,$s2,$s1
+    lb $t8,($s2)
+    
+    seq $s6, $t8,40
+    seq $s6,$s6,0
+    seq $s7,$t8,43
+    add $s6,$s6,$s7
+    seq $s7,$t8,45
+    add $s6,$s6,$s7
+    
+    addi $s6,$s6,1
+    seq $s7,$s6,3
+    sub $s6,$s6,$s7
+    
+    seq $s7,$t8,42
+    add $s6,$s6,$s7
+    seq $s7,$t8,47
+    add $s6,$s6,$s7
+    
+    addi $s6,$s6,1
+    #prec(c) <= prec(stack[stackIndex])
+    slt $s7,$s5,$s6 
+    seq $t8,$s5,$s6
+    add $s7,$s7,$t8
+    #stackIndex >= 0 && prec(c) <= prec(stack[stackIndex])
+    mult $s7,$s4
+    mflo $t9
+    beq $t9,1,while_loop_2_Infix_to_Postfix
+    #stack[++stackIndex] = c;
+    addi $s1,$s1,1
+    la $s2, stack
+    add $s2,$s2,$s1
+    #lb $s3, ($t2)
+    sb $t2,($s2)  
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo       
+    j for_loop_Infix_to_Postfix # Lap lai vong lap
+while_loop_1_Infix_to_Postfix:
+     #Postfix[PostfixIndex++] = stack[stackIndex--]
+     la $s2, post_fix
+     add $s2, $s2, $s0
+     la $s3, stack
+     add $s3, $s3, $s1
+     lb $s4, ($s3)
+     sb $s4, ($s2)
+     addi $s0,$s0,1 #PostfixIndex++
+     subi $s1,$s1,1 #stackIndex--
+     j if_3_for_loop_Infix_to_Postfix
+while_loop_2_Infix_to_Postfix:
+     #Postfix[PostfixIndex++] = stack[stackIndex--]
+     la $s2, post_fix
+     add $s2, $s2, $s0
+     la $s3, stack
+     add $s3, $s3, $s1
+     lb $s4, ($s3)
+     sb $s4, ($s2)
+     addi $s0,$s0,1
+     subi $s1,$s1,1
+     j if_4_for_loop_Infix_to_Postfix
+while_loop_3_Infix_to_Postfix:
+     #beq $s1,-1, print_string
+     beq $s1,-1, Post_fix_to_Result
+     la $s2, post_fix
+     add $s2, $s2, $s0
+     la $s3, stack
+     add $s3, $s3, $s1
+     lb $s4, ($s3)
+     sb $s4, ($s2)
+     addi $s0,$s0,1
+     subi $s1,$s1,1
+     j while_loop_3_Infix_to_Postfix
+Post_fix_to_Result:
+     #khai bao cac tham so
+     #s1 PostfixSize
+     li $s1, 0 #PostfixIndex
+     li $s2, -4 #stackIndex
+     la $t0, post_fix
+while_loop_Post_fix_to_Result:
+     lb $t2, 0($t0)       #c   
+     beq $s1,$s0, print_result
+     
+    #if(c >= '0' && c <= '9')
+    sge $t3,$t2, 48 #c>='0'
+    sle $t4,$t2, 57 #c<= '9'
+    mult $t3,$t4
+    mflo $t5
+    li $t6,1
+    beq $t5,$t6, if_1_while_loop_Post_fix_to_Result
+     #else
+    j if_2_while_loop_Post_fix_to_Result
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo  
+    addi $s1,$s1,1     
+    j while_loop_Post_fix_to_Result # Lap lai vong lap
+if_1_while_loop_Post_fix_to_Result:
+    #stack[++stackIndex]
+    addi $s2,$s2,4
+    la $s3, stack_2
+    add $s3,$s3,$s2
+    #stack[++stackIndex] = c - 48
+    subi $t1,$t2,48
+    sw $t1,($s3)
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo       
+    addi $s1,$s1,1 
+    j while_loop_Post_fix_to_Result # Lap lai vong lap
+if_2_while_loop_Post_fix_to_Result:
+	
+    #if (c == '+')
+    beq $t2,43,if_2_1_while_loop_Post_fix_to_Result
+    #else if (c == '-')
+    beq $t2,45,if_2_2_while_loop_Post_fix_to_Result
+    #else if (c == '*')
+    beq $t2,42,if_2_3_while_loop_Post_fix_to_Result
+    #else
+    j if_2_4_while_loop_Post_fix_to_Result
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo
+    addi $s1,$s1,1        
+    j while_loop_Post_fix_to_Result # Lap lai vong lap
+if_2_1_while_loop_Post_fix_to_Result:
+    subi $s5,$s2,4       #stackIndex - 1
+    la $s3, stack_2
+    add $s3,$s3,$s5
+    la $t9, stack_2
+    add $t9,$t9,$s2
+    
+    lw $t8,($s3)
+    lw $t1,($t9)
+    #subi $t8,$t8,48
+    #subi $t1,$t1,48
+    add $t8,$t8,$t1
+    sw $t8,($s3)
+    
+    subi $s2,$s2,4       #stackIndex--
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo   
+    addi $s1,$s1,1     
+    j while_loop_Post_fix_to_Result # Lap lai vong lap
+if_2_2_while_loop_Post_fix_to_Result:
+    subi $s5,$s2,4      #stackIndex - 1
+    la $s3, stack_2
+    add $s3,$s3,$s5
+    la $t9, stack_2
+    add $t9,$t9,$s2
+    
+    lw $t8,($s3)
+    lw $t1,($t9)
+    #subi $t8,$t8,48
+    #subi $t1,$t1,48
+    sub $t8,$t8,$t1
+    sw $t8,($s3)
+    
+    subi $s2,$s2,4       #stackIndex--
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo  
+    addi $s1,$s1,1      
+    j while_loop_Post_fix_to_Result # Lap lai vong lap
+if_2_3_while_loop_Post_fix_to_Result:
+    subi $s5,$s2,4       #stackIndex - 1
+    la $s3, stack_2
+    add $s3,$s3,$s5
+    la $t9, stack_2
+    add $t9,$t9,$s2
+ 
+    lw $t8,($s3)
+    lw $t1,($t9)
+    #subi $t8,$t8,48
+    #subi $t1,$t1,48
+    mult $t8,$t1
+    mflo $t8
+    sw $t8,($s3)
+    
+    subi $s2,$s2,4       #stackIndex--
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo  
+    addi $s1,$s1,1      
+    j while_loop_Post_fix_to_Result # Lap lai vong lap
+if_2_4_while_loop_Post_fix_to_Result:
+    subi $s5,$s2,4       #stackIndex - 1
+    la $s3, stack_2
+    add $s3,$s3,$s5
+    la $t9, stack_2
+    add $t9,$t9,$s2
+ 
+    lw $t8,($s3)
+    lw $t1,($t9)
+    #subi $t8,$t8,48
+    #subi $t1,$t1,48
+    div $t8,$t1
+    mflo $t8
+    sw $t8,($s3)
+    
+    subi $s2,$s2,4       #stackIndex--
+    addi $t0, $t0, 1     # Chuy?n ??n ký t? ti?p theo  
+    addi $s1,$s1,1      
+    j while_loop_Post_fix_to_Result # Lap lai vong lap
+print_string : 
+    li $v0, 4            # Mã syscall cho print_string
+    la $a0, post_fix       # ??a ch? c?a chu?i c?n in
+    syscall 
+    j exit
+print_result :
+    li $v0, 1            # Mã syscall cho print_string
+    la $s0, stack_2
+    lw $a0, 0($s0)      # ??a ch? c?a chu?i c?n in
+    syscall 
+    j exit
+exit :
+    li $v0,10
+    syscall
